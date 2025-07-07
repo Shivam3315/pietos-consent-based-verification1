@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PAN Verification via DigiLocker</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --success: #27ae60;
+            --danger: #e74c3c;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --gray: #95a5a6;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            background-color: #f5f7fa;
+            color: var(--dark);
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+        }
+        
+        h1, h2 {
+            color: var(--primary);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        
+        button {
+            background-color: var(--secondary);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        .status {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            display: none;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top: 4px solid var(--secondary);
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .verification-link {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #e8f4fc;
+            border-radius: 5px;
+            word-break: break-all;
+        }
+        
+        .mobile-info {
+            font-weight: 600;
+            color: var(--secondary);
+        }
+        
+        .pan-details {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid var(--success);
+        }
+        
+        .detail-row {
+            display: flex;
+            margin-bottom: 10px;
+        }
+        
+        .detail-label {
+            font-weight: 600;
+            width: 120px;
+        }
+        
+        .expiry-info {
+            margin-top: 20px;
+            font-size: 14px;
+            color: var(--gray);
+            text-align: center;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+        }
+        
+        .modal button {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PAN Verification</h1>
+        
+        <!-- PAN Input Form -->
+        <div id="panForm">
+            <div class="form-group">
+                <label for="panNumber">PAN Number*</label>
+                <input type="text" id="panNumber" placeholder="Enter PAN (e.g., ABCDE1234F)" 
+                       pattern="[A-Z]{5}[0-9]{4}[A-Z]{1}" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="fullName">Full Name (as per PAN)*</label>
+                <input type="text" id="fullName" placeholder="Enter your full name" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="dob">Date of Birth (as per PAN)*</label>
+                <input type="date" id="dob" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="mobile">Registered Mobile Number*</label>
+                <input type="tel" id="mobile" placeholder="Enter registered mobile number" 
+                       pattern="[0-9]{10}" required>
+            </div>
+            
+            <button id="verifyBtn">Verify via DigiLocker</button>
+            
+            <div id="statusMessage" class="status"></div>
+        </div>
+        
+        <!-- Verification Link Section -->
+        <div id="linkSection" style="display: none;">
+            <h2>Verification Link Sent</h2>
+            <p>We've sent a verification link to your mobile number ending with 
+               <span class="mobile-info" id="mobileLastDigits"></span>.</p>
+            
+            <div class="verification-link">
+                <p>Direct verification link:</p>
+                <p id="verificationLink"></p>
+            </div>
+            
+            <p>Click the link to verify your PAN via DigiLocker.</p>
+            <button id="resendBtn">Resend Link</button>
+        </div>
+        
+        <!-- Loading Indicator -->
+        <div class="loading" id="loadingIndicator">
+            <div class="spinner"></div>
+            <p>Processing your request...</p>
+        </div>
+        
+        <!-- Verification Results -->
+        <div id="verificationResults" style="display: none;">
+            <h2>PAN Verification Successful</h2>
+            
+            <div class="pan-details">
+                <div class="detail-row">
+                    <div class="detail-label">PAN Number:</div>
+                    <div id="verifiedPan"></div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Name:</div>
+                    <div id="verifiedName"></div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Father's Name:</div>
+                    <div id="verifiedFather"></div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Date of Birth:</div>
+                    <div id="verifiedDob"></div>
+                </div>
+            </div>
+            
+            <div class="expiry-info">
+                <p>This verification token will expire in <span id="expiryDays">5</span> days.</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Approval Modal -->
+    <div class="modal" id="approvalModal">
+        <div class="modal-content">
+            <h2>Approve PAN Verification</h2>
+            <p>You are about to verify your PAN details through DigiLocker.</p>
+            <p>Please confirm to proceed to DigiLocker login.</p>
+            <button id="confirmBtn">Confirm & Proceed</button>
+            <button id="cancelBtn" style="background-color: var(--gray); margin-top: 10px;">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let verificationData = {};
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check for callback from DigiLocker
+            const urlParams = new URLSearchParams(window.location.search);
+            const authCode = urlParams.get('code');
+            const state = urlParams.get('state');
+            
+            if (authCode && state) {
+                handleDigiLockerCallback(authCode, state);
+                return;
+            }
+            
+            // Check for existing verification
+            const storedData = localStorage.getItem('panVerificationData');
+            if (storedData) {
+                showVerificationResults(JSON.parse(storedData));
+                return;
+            }
+            
+            // Setup event listeners
+            document.getElementById('verifyBtn').addEventListener('click', startVerification);
+            document.getElementById('resendBtn').addEventListener('click', resendVerificationLink);
+            document.getElementById('confirmBtn').addEventListener('click', proceedToDigiLocker);
+            document.getElementById('cancelBtn').addEventListener('click', closeModal);
+        });
+        
+        function startVerification() {
+            // Get form values
+            const panNumber = document.getElementById('panNumber').value.trim().toUpperCase();
+            const fullName = document.getElementById('fullName').value.trim();
+            const dob = document.getElementById('dob').value;
+            const mobile = document.getElementById('mobile').value.trim();
+            
+            // Validate inputs
+            if (!validatePAN(panNumber)) {
+                showStatus('Please enter a valid PAN number (format: ABCDE1234F)', 'error');
+                return;
+            }
+            
+            if (!fullName) {
+                showStatus('Please enter your full name', 'error');
+                return;
+            }
+            
+            if (!dob) {
+                showStatus('Please select your date of birth', 'error');
+                return;
+            }
+            
+            if (!validateMobile(mobile)) {
+                showStatus('Please enter a valid 10-digit mobile number', 'error');
+                return;
+            }
+            
+            // Store verification data
+            verificationData = {
+                panNumber,
+                fullName,
+                dob,
+                mobile,
+                stateToken: generateToken(),
+                verificationToken: generateToken(),
+                timestamp: new Date().toISOString()
+            };
+            
+            // Show approval modal
+            document.getElementById('approvalModal').style.display = 'flex';
+        }
+        
+        function proceedToDigiLocker() {
+            closeModal();
+            showLoading(true);
+            
+            // In production, you would send this to your backend
+            // For demo, we'll simulate the process
+            setTimeout(() => {
+                // Simulate sending SMS with verification link
+                const verificationLink = generateVerificationLink(verificationData.verificationToken);
+                
+                // Show the verification link section
+                document.getElementById('panForm').style.display = 'none';
+                document.getElementById('linkSection').style.display = 'block';
+                document.getElementById('mobileLastDigits').textContent = verificationData.mobile.slice(-3);
+                document.getElementById('verificationLink').textContent = verificationLink;
+                
+                // Store data in sessionStorage
+                sessionStorage.setItem('panVerificationData', JSON.stringify(verificationData));
+                
+                showLoading(false);
+            }, 1500);
+        }
+        
+        function resendVerificationLink() {
+            showLoading(true);
+            document.getElementById('resendBtn').disabled = true;
+            
+            // In production, call your backend to resend the SMS
+            setTimeout(() => {
+                showStatus('Verification link has been resent', 'success');
+                document.getElementById('resendBtn').disabled = false;
+                showLoading(false);
+            }, 1000);
+        }
+        
+        function handleDigiLockerCallback(authCode, state) {
+            showLoading(true);
+            
+            // Get stored verification data
+            const storedData = JSON.parse(sessionStorage.getItem('panVerificationData'));
+            
+            if (!storedData || storedData.stateToken !== state) {
+                showStatus('Invalid verification request. Please try again.', 'error');
+                showLoading(false);
+                document.getElementById('panForm').style.display = 'block';
+                return;
+            }
+            
+            // In production, you would:
+            // 1. Send authCode to your backend
+            // 2. Backend exchanges code for access token
+            // 3. Backend fetches PAN details from DigiLocker
+            // 4. Backend verifies details match
+            
+            // For demo, we'll simulate successful verification
+            setTimeout(() => {
+                const verificationResults = {
+                    panNumber: storedData.panNumber,
+                    name: storedData.fullName,
+                    fatherName: "SIMULATED_FATHER_NAME",
+                    dob: formatDate(storedData.dob),
+                    verificationDate: new Date().toISOString(),
+                    authToken: generateToken(),
+                    expiresIn: 5 // days
+                };
+                
+                // Store results
+                localStorage.setItem('panVerificationData', JSON.stringify(verificationResults));
+                
+                // Show results
+                showVerificationResults(verificationResults);
+                showLoading(false);
+            }, 2000);
+        }
+        
+        function showVerificationResults(data) {
+            document.getElementById('panForm').style.display = 'none';
+            document.getElementById('linkSection').style.display = 'none';
+            
+            // Display verified details
+            document.getElementById('verifiedPan').textContent = data.panNumber;
+            document.getElementById('verifiedName').textContent = data.name;
+            document.getElementById('verifiedFather').textContent = data.fatherName;
+            document.getElementById('verifiedDob').textContent = formatDate(data.dob);
+            document.getElementById('expiryDays').textContent = data.expiresIn;
+            
+            document.getElementById('verificationResults').style.display = 'block';
+        }
+        
+        function generateVerificationLink(token) {
+            // In production, this would be your backend endpoint
+            // For demo, we'll use current URL with token
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.set('verify', token);
+            return currentUrl.toString();
+        }
+        
+        function validatePAN(pan) {
+            return /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(pan);
+        }
+        
+        function validateMobile(mobile) {
+            return /^[0-9]{10}$/.test(mobile);
+        }
+        
+        function generateToken() {
+            return 'token_' + Math.random().toString(36).substr(2, 16) + '_' + Date.now().toString(36);
+        }
+        
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-IN');
+        }
+        
+        function showLoading(show) {
+            document.getElementById('loadingIndicator').style.display = show ? 'block' : 'none';
+        }
+        
+        function showStatus(message, type) {
+            const statusElement = document.getElementById('statusMessage');
+            statusElement.textContent = message;
+            statusElement.className = 'status ' + type;
+            statusElement.style.display = 'block';
+            
+            setTimeout(() => {
+                statusElement.style.display = 'none';
+            }, 5000);
+        }
+        
+        function closeModal() {
+            document.getElementById('approvalModal').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
